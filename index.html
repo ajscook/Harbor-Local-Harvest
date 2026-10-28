@@ -74,10 +74,14 @@ h1 em{font-family:var(--serif);font-weight:500;font-style:italic;color:var(--ora
 .mh:hover{color:var(--ink)}
 .mh.now{background:var(--orange);color:#fff}
 .mh .ini{display:none}
-.track{position:relative;margin-left:var(--nc);height:20px}
+.track{position:relative;margin-left:var(--nc);height:40px;cursor:pointer;touch-action:none;outline:none}
+.track:focus-visible .knob{box-shadow:0 0 0 3px var(--ink)}
 .track .base{position:absolute;left:0;right:0;top:9px;height:4px;border-radius:2px;background:var(--tanline)}
 .track .fill{position:absolute;left:0;top:9px;height:4px;border-radius:2px;background:var(--orange)}
-.track .knob{position:absolute;top:4px;width:14px;height:14px;border-radius:50%;background:var(--orange);border:3px solid var(--card);box-shadow:0 0 0 1px var(--orange);transform:translateX(-50%)}
+.track .knob{position:absolute;top:2px;width:18px;height:18px;border-radius:50%;background:var(--orange);border:3px solid var(--card);box-shadow:0 0 0 1px var(--orange);transform:translateX(-50%);cursor:grab}
+.track.drag .knob{cursor:grabbing;transform:translateX(-50%) scale(1.15)}
+.track .tlabel{position:absolute;top:22px;transform:translateX(-50%);background:var(--orange);color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;padding:1px 8px;border-radius:999px;white-space:nowrap;pointer-events:none}
+.track .tlabel.l{transform:none}.track .tlabel.r{transform:translateX(-100%)}
 .track .tick{position:absolute;top:7px;width:1px;height:8px;background:var(--tan)}
 
 /* category sections */
@@ -86,8 +90,9 @@ h1 em{font-family:var(--serif);font-weight:500;font-style:italic;color:var(--ora
 .sec-h .sw{width:14px;height:14px;border-radius:4px;background:var(--c);flex:none}
 .sec-h h2{font-size:17px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
 .sec-h .ct{font-size:12.5px;color:var(--ink2);font-weight:600}
-.sec-h .chev{margin-left:auto;width:30px;height:30px;border-radius:8px;border:1.5px solid var(--tan);display:grid;place-items:center;font-weight:800;color:var(--orange-deep);font-size:16px;line-height:1;transition:transform .2s}
-.sec.closed .chev{transform:rotate(-90deg)}
+.chev{margin-left:auto;align-self:center;flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--orange);color:#fff}
+.chev svg{width:16px;height:16px}
+.closed .chev{background:var(--card);color:var(--orange-deep);box-shadow:inset 0 0 0 2px var(--orange)}
 .sec.closed .sec-b{display:none}
 .sec-b{position:relative;border-top:1px solid var(--tanline)}
 .grid{display:grid;grid-template-columns:var(--nc) repeat(12,minmax(0,1fr))}
@@ -123,8 +128,7 @@ h1 em{font-family:var(--serif);font-weight:500;font-style:italic;color:var(--ora
 .group-h{display:flex;align-items:baseline;gap:10px;width:100%;padding:14px 16px;text-align:left}
 .group-h h3{font-size:17px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
 .group-h .ct{font-size:12.5px;color:var(--ink2);font-weight:600}
-.group-h .chev{margin-left:auto;align-self:center;width:30px;height:30px;border-radius:8px;border:1.5px solid var(--tan);display:grid;place-items:center;font-weight:800;color:var(--orange-deep);font-size:16px;transition:transform .2s}
-.group.closed .chev{transform:rotate(-90deg)}
+
 .group.closed .items{display:none}
 .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;padding:0 16px 16px}
 .it{display:flex;align-items:center;gap:10px;text-align:left;padding:10px 12px;border-radius:9px;background:#f4eedf;border-left:5px solid var(--c);min-width:0}
@@ -427,7 +431,7 @@ const ITEMS = [
 
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const MONF=["January","February","March","April","May","June","July","August","September","October","November","December"];
-const CAT={salmon:{l:"Salmon",c:"var(--salmon)"},finfish:{l:"Finfish",c:"var(--finfish)"},shellfish:{l:"Shellfish",c:"var(--shellfish)"},harvest:{l:"Local Harvest",c:"var(--harvest)"}};
+const CAT={harvest:{l:"Local Harvest",c:"var(--harvest)"},salmon:{l:"Salmon",c:"var(--salmon)"},finfish:{l:"Finfish",c:"var(--finfish)"},shellfish:{l:"Shellfish",c:"var(--shellfish)"}};
 const WHERE={pen:"Peninsula",sound:"Sound & Coast",wa:"Washington",ak:"Alaska"};
 const WORD={pen:0,sound:1,wa:2,ak:3};
 const SWING={steady:["Steady","Price holds fairly even through the season."],swings:["Variable","Weather and supply move the price from week to week."],opener:["Highest at the opener","Prices start high when the season opens and ease after."]};
@@ -435,10 +439,17 @@ const SWING={steady:["Steady","Price holds fairly even through the season."],swi
 const NOW=new Date(), NOWM=NOW.getMonth()+1, NOWY=NOW.getFullYear();
 const DIM=new Date(NOWY,NOWM,0).getDate();
 const PCT=((NOWM-1)+(NOW.getDate()-.5)/DIM)/12;
+const SNAP=24;
+function selInfo(){
+  if(st.sel==null)return {m:NOWM,pct:PCT,label:"Today",today:true};
+  const m=Math.floor(st.sel/2)+1,d=st.sel%2?15:1;
+  return {m,pct:st.sel/SNAP,label:MON[m-1]+" "+d,today:false};
+}
+const labelSide=p=>p<.04?"l":p>.96?"r":"";
 
 function load(k,d){try{const v=localStorage.getItem("nwcal:"+k);return v?JSON.parse(v):d}catch(e){return d}}
 function save(k,v){try{localStorage.setItem("nwcal:"+k,JSON.stringify(v))}catch(e){}}
-const st={view:"year",month:NOWM,cats:new Set(Object.keys(CAT)),src:"all",pen:false,closed:new Set(load("closed",[])),mclosed:new Set(load("mclosed",["also"]))};
+const st={view:"year",month:NOWM,cats:new Set(Object.keys(CAT)),src:"all",pen:false,closed:new Set(load("closed",[])),mclosed:new Set(load("mclosed",["also"])),sel:null};
 
 const nx=m=>m%12+1, pv=m=>(m+10)%12+1;
 const yr=it=>it.avail.length===12;
@@ -459,25 +470,26 @@ function chips(){
   document.querySelectorAll("#viewSeg button").forEach(b=>b.classList.toggle("on",b.dataset.v===st.view));
 }
 
+const chev=closed=>`<span class="chev" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">${closed?'<path d="M8 2.5v11M2.5 8h11"/>':'<path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/>'}</svg></span>`;
 function yearView(){
-  const items=visible();
-  let h=`<div class="subbar"><div class="legend"><span><i class="lg" style="opacity:.3"></i>In season</span><span><i class="lg"></i>Peak</span><span><i class="dia"></i>Usual order-by month</span><span><i class="tline"></i>Today</span></div>
-    <div><button class="link" data-all="open">Expand all</button> &nbsp; <button class="link" data-all="close">Collapse all</button></div></div>`;
+  const items=visible(),S=selInfo();
+  let h=`<div class="subbar"><div class="legend"><span><i class="lg" style="opacity:.3"></i>In season</span><span><i class="lg"></i>Peak</span><span><i class="dia"></i>Start planning</span><span id="tleg"><i class="tline"></i>${S.today?"Today":"Viewing "+S.label}</span></div>
+    <div><button class="link" id="todayBtn" data-today ${S.today?"hidden":""}>Back to today</button> &nbsp; <button class="link" data-all="open">Expand all</button> &nbsp; <button class="link" data-all="close">Collapse all</button></div></div>`;
   let ticks="";for(let i=1;i<12;i++)ticks+=`<i class="tick" style="left:${i/12*100}%"></i>`;
-  h+=`<div class="mhead-y"><div class="mh-grid"><div class="yr">${NOWY}</div>${MON.map((m,i)=>`<div class="mh ${i+1===NOWM?"now":""}" data-m="${i+1}"><span class="full">${m}</span><span class="ini">${m[0]}</span></div>`).join("")}</div>
-    <div class="track"><i class="base"></i>${ticks}<i class="fill" style="width:${PCT*100}%"></i><i class="knob" style="left:${PCT*100}%"></i></div></div>`;
+  h+=`<div class="mhead-y"><div class="mh-grid"><div class="yr">${NOWY}</div>${MON.map((m,i)=>`<div class="mh ${i+1===S.m?"now":""}" data-m="${i+1}"><span class="full">${m}</span><span class="ini">${m[0]}</span></div>`).join("")}</div>
+    <div class="track" id="track" role="slider" tabindex="0" aria-label="Move the date line" aria-valuemin="0" aria-valuemax="23" aria-valuetext="${S.label}"><i class="base"></i>${ticks}<i class="fill" style="width:${S.pct*100}%"></i><i class="knob" style="left:${S.pct*100}%"></i><span class="tlabel ${labelSide(S.pct)}" style="left:${S.pct*100}%">${S.label}</span></div></div>`;
   if(!items.length)h+=`<div class="sec" style="--c:var(--tan)"><div class="empty">Nothing matches these filters.</div></div>`;
   for(const c of catOrder){
     const rows=items.filter(i=>i.cat===c).sort(order);if(!rows.length)continue;
     const closed=st.closed.has(c);
-    h+=`<section class="sec ${closed?"closed":""}" style="--c:${CAT[c].c}"><button class="sec-h" data-sec="${c}" aria-expanded="${!closed}"><i class="sw"></i><h2>${CAT[c].l}</h2><span class="ct">${rows.length} item${rows.length===1?"":"s"}</span><span class="chev">&#8964;</span></button>
-      <div class="sec-b" style="--p:${PCT}"><div class="grid">`;
+    h+=`<section class="sec ${closed?"closed":""}" style="--c:${CAT[c].c}"><button class="sec-h" data-sec="${c}" aria-expanded="${!closed}"><i class="sw"></i><h2>${CAT[c].l}</h2><span class="ct">${rows.length} item${rows.length===1?"":"s"}</span>${chev(closed)}</button>
+      <div class="sec-b" style="--p:${S.pct}"><div class="grid">`;
     for(const it of rows){
       h+=`<div class="row" data-id="${it.id}"><div class="nm"><b>${it.name}</b><div class="meta">${wtag(it)}${htag(it)}</div></div>`;
       for(let m=1;m<=12;m++){
         const a=it.avail.includes(m),p=it.peak.includes(m);let bar="";
         if(a)bar=`<div class="bar ${p?"":"a"} ${!it.avail.includes(pv(m))?"s":""} ${!it.avail.includes(nx(m))?"e":""}" style="background:${CAT[c].c}"></div>`;
-        h+=`<div class="cell ${m===NOWM?"now":""}">${bar}${it.lock===m?`<span class="lk" title="Usually ordered by ${MONF[m-1]}"></span>`:""}</div>`;
+        h+=`<div class="cell ${m===S.m?"now":""}" data-mi="${m}">${bar}${it.lock===m?`<span class="lk" title="Usually ordered by ${MONF[m-1]}"></span>`:""}</div>`;
       }
       h+=`</div>`;
     }
@@ -507,17 +519,51 @@ function monthView(){
   for(const [k,label] of GROUPS){
     const list=items.filter(i=>statusFor(i,m)===k);
     const closed=st.mclosed.has(k);
-    h+=`<section class="group ${closed?"closed":""}"><button class="group-h" data-grp="${k}" aria-expanded="${!closed}"><h3>${label}</h3><span class="ct">${list.length}</span><span class="chev">&#8964;</span></button>
+    h+=`<section class="group ${closed?"closed":""}"><button class="group-h" data-grp="${k}" aria-expanded="${!closed}"><h3>${label}</h3><span class="ct">${list.length}</span>${chev(closed)}</button>
       ${list.length?`<div class="items">${list.map(i=>{const t=timing(i,k,m);return `<button class="it" data-id="${i.id}" style="--c:${CAT[i.cat].c}"><b>${i.name}</b>${t?`<span>${t}</span>`:""}</button>`}).join("")}</div>`:`<div class="items" style="display:block"><p class="none" style="padding:0">Nothing this month.</p></div>`}</section>`;
   }
   return h;
 }
 
+function applySel(){
+  const S=selInfo();st.month=S.m;
+  const tr=document.getElementById("track");if(!tr)return;
+  tr.querySelector(".fill").style.width=S.pct*100+"%";
+  tr.querySelector(".knob").style.left=S.pct*100+"%";
+  const lb=tr.querySelector(".tlabel");lb.style.left=S.pct*100+"%";lb.textContent=S.label;lb.className="tlabel "+labelSide(S.pct);
+  tr.setAttribute("aria-valuetext",S.label);
+  document.querySelectorAll(".sec-b").forEach(el=>el.style.setProperty("--p",S.pct));
+  document.querySelectorAll(".mh").forEach((el,i)=>el.classList.toggle("now",i+1===S.m));
+  document.querySelectorAll(".cell[data-mi]").forEach(el=>el.classList.toggle("now",+el.dataset.mi===S.m));
+  const lg=document.getElementById("tleg");if(lg)lg.innerHTML=`<i class="tline"></i>${S.today?"Today":"Viewing "+S.label}`;
+  const tb=document.getElementById("todayBtn");if(tb)tb.hidden=S.today;
+}
+function idxFromX(tr,x){const r=tr.getBoundingClientRect();const f=Math.min(Math.max((x-r.left)/r.width,0),1);return Math.min(SNAP-1,Math.round(f*SNAP));}
+let dragging=null;
+document.addEventListener("pointerdown",e=>{
+  const tr=e.target.closest("#track");if(!tr)return;
+  e.preventDefault();dragging=tr;tr.classList.add("drag");try{tr.setPointerCapture(e.pointerId)}catch(_){}
+  const i=idxFromX(tr,e.clientX);if(i!==st.sel){st.sel=i;applySel();}
+});
+document.addEventListener("pointermove",e=>{
+  if(!dragging)return;const i=idxFromX(dragging,e.clientX);if(i!==st.sel){st.sel=i;applySel();}
+});
+const endDrag=()=>{if(dragging){dragging.classList.remove("drag");dragging=null;}};
+document.addEventListener("pointerup",endDrag);document.addEventListener("pointercancel",endDrag);
+document.addEventListener("keydown",e=>{
+  if(!e.target.closest||!e.target.closest("#track"))return;
+  const cur=st.sel??Math.min(SNAP-1,Math.round(PCT*SNAP));let i=cur;
+  if(e.key==="ArrowRight"||e.key==="ArrowUp")i=Math.min(SNAP-1,cur+1);
+  else if(e.key==="ArrowLeft"||e.key==="ArrowDown")i=Math.max(0,cur-1);
+  else if(e.key==="Home")i=0;else if(e.key==="End")i=SNAP-1;else return;
+  e.preventDefault();st.sel=i;applySel();
+});
+
 function render(){chips();document.getElementById("view").innerHTML=st.view==="year"?yearView():monthView();}
 
 function openItem(id){
   const it=ITEMS.find(i=>i.id===id);if(!it)return;const c=CAT[it.cat].c,h=it.harbor;
-  let strip="";for(let m=1;m<=12;m++){const a=it.avail.includes(m),p=it.peak.includes(m);strip+=`<div class="${m===NOWM?"now":""}" style="${a?`background:${c};opacity:${p?1:.35}`:""}">${it.lock===m?'<span class="lk"></span>':""}</div>`;}
+  let strip="";for(let m=1;m<=12;m++){const a=it.avail.includes(m),p=it.peak.includes(m);strip+=`<div class="${m===selInfo().m?"now":""}" style="${a?`background:${c};opacity:${p?1:.35}`:""}">${it.lock===m?'<span class="lk"></span>':""}</div>`;}
   const head={carries:`Harbor carries this · ${h.n} source${h.n===1?"":"s"}`,toga:"Special order through Toga Hertzog",direct:"Direct from source"}[h.tier];
   const tail={carries:"Order through Toga Hertzog.",toga:"",direct:"Toga Hertzog can help find a source."}[h.tier];
   const s=start(it),e=end(it);
@@ -539,6 +585,8 @@ function closeItem(){document.getElementById("drawer").classList.remove("on");do
 
 document.addEventListener("click",e=>{
   const t=e.target;
+  if(t.closest("#track"))return;
+  if(t.closest("[data-today]")){st.sel=null;st.month=NOWM;applySel();return;}
   const v=t.closest("#viewSeg button");if(v){st.view=v.dataset.v;render();return;}
   const c=t.closest("[data-c]");if(c){const k=c.dataset.c;
     if(st.cats.size===4)st.cats=new Set([k]);else if(st.cats.has(k)){st.cats.delete(k);if(!st.cats.size)st.cats=new Set(catOrder);}else st.cats.add(k);render();return;}
